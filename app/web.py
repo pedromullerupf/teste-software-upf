@@ -1,5 +1,8 @@
-"""Aplicação web (Flask): telas de títulos e de baixa, mais a API em /api."""
-from flask import Flask, flash, redirect, render_template, request, url_for
+"""Aplicação web (Flask): login, títulos, baixa e fluxo de caixa, mais a API em /api."""
+import os
+from datetime import timedelta
+
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from app import regras
 from app.api import criar_api
@@ -14,6 +17,10 @@ from app.servicos import (
     TituloNaoEncontradoError,
 )
 
+USUARIO = os.environ.get("USUARIO", "admin")
+SENHA = os.environ.get("SENHA", "admin123")
+ROTAS_SEM_LOGIN = ("login", "entrar", "static")
+
 
 def criar_app(database_url: str = DATABASE_URL, relogio=None) -> Flask:
     app = Flask(__name__)
@@ -22,6 +29,45 @@ def criar_app(database_url: str = DATABASE_URL, relogio=None) -> Flask:
     relogio = relogio or RelogioSistema()
     servico_baixa = ServicoBaixa(repositorio, relogio, NotificadorLog())
     app.register_blueprint(criar_api(repositorio, servico_baixa))
+
+    @app.before_request
+    def exigir_login():
+        rota = request.endpoint or ""
+        if rota in ROTAS_SEM_LOGIN or rota.startswith("api."):
+            return None
+        if not session.get("usuario"):
+            return redirect(url_for("login"))
+        return None
+
+    @app.get("/login")
+    def login():
+        return render_template("login.html")
+
+    @app.post("/login")
+    def entrar():
+        if request.form.get("usuario") == USUARIO and request.form.get("senha") == SENHA:
+            session["usuario"] = USUARIO
+            return redirect(url_for("listar_titulos"))
+        flash("Usuário ou senha inválidos.", "erro")
+        return render_template("login.html"), 401
+
+    @app.post("/sair")
+    def sair():
+        session.clear()
+        return redirect(url_for("login"))
+
+    @app.get("/fluxo-caixa")
+    def fluxo_caixa():
+        hoje = relogio.hoje()
+        try:
+            inicio = ler_data(request.args.get("inicio") or hoje.replace(day=1).isoformat())
+            fim = ler_data(request.args.get("fim") or (inicio + timedelta(days=30)).isoformat())
+        except RegraVioladaError as erro:
+            flash(str(erro), "erro")
+            return redirect(url_for("fluxo_caixa"))
+        return render_template(
+            "fluxo.html", inicio=inicio, fim=fim, saldo=repositorio.fluxo_caixa(inicio, fim)
+        )
 
     @app.get("/")
     def listar_titulos():

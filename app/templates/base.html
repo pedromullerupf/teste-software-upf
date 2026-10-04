@@ -9,10 +9,16 @@
 <body>
   <header>
     <strong>Contas a pagar e a receber</strong>
+    {% if session.get("usuario") %}
     <nav aria-label="Principal">
       <a href="{{ url_for('listar_titulos') }}">Títulos</a>
       <a href="{{ url_for('formulario_titulo') }}">Novo título</a>
+      <a href="{{ url_for('fluxo_caixa') }}">Fluxo de caixa</a>
     </nav>
+    <form method="post" action="{{ url_for('sair') }}">
+      <button type="submit" class="link">Sair</button>
+    </form>
+    {% endif %}
   </header>
   <main>
     {% for categoria, mensagem in get_flashed_messages(with_categories=true) %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Fluxo de caixa{% endblock %}
+{% block conteudo %}
+<h1>Fluxo de caixa</h1>
+<form method="get" class="formulario">
+  <label for="inicio">Início</label>
+  <input id="inicio" name="inicio" type="date" value="{{ inicio.isoformat() }}">
+
+  <label for="fim">Fim</label>
+  <input id="fim" name="fim" type="date" value="{{ fim.isoformat() }}">
+
+  <button type="submit">Calcular</button>
+</form>
+
+<h2>Saldo projetado de {{ inicio.strftime("%d/%m/%Y") }} a {{ fim.strftime("%d/%m/%Y") }}</h2>
+<p class="total" data-campo="saldo-projetado">{{ "%.2f"|format(saldo) }}</p>
+<p>A receber menos a pagar, considerando os saldos dos títulos abertos ou parciais que vencem no período.</p>
+{% endblock %}

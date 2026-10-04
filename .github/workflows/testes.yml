@@ -1,0 +1,45 @@
+name: testes
+
+on: [push, pull_request]
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: contas
+          POSTGRES_PASSWORD: contas
+          POSTGRES_DB: contas_teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U contas -d contas_teste"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://contas:contas@localhost:5432/contas_teste
+      DATABASE_URL_TESTE: postgresql://contas:contas@localhost:5432/contas_teste
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Testes unitários
+        run: python -m pytest -m unit --cov=app --cov-branch --cov-report=term-missing
+
+      # O pytest termina com código 5 quando não encontra nenhum teste. Enquanto você
+      # ainda não tiver testes nessas duas camadas, isso não deve reprovar o pipeline.
+      - name: Testes de banco e de integração
+        run: python -m pytest -m "banco or integracao" || [ $? -eq 5 ]

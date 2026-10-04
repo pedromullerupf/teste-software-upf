@@ -1,6 +1,7 @@
 # Ambiente padrão da disciplina.
 #   docker compose up -d                        sobe banco e aplicação (http://localhost:8000)
 #   docker compose run --rm testes pytest -v    roda os testes dentro do contêiner
+#   docker compose run --rm e2e pytest -m e2e   roda os testes de navegador (sem janela)
 #   docker compose down -v                      apaga tudo, inclusive os dados
 
 x-ambiente: &ambiente
@@ -46,6 +47,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    profiles: ["testes"]
+    environment:
+      <<: *ambiente
+      BASE_URL: http://app:8000
+    volumes:
+      - .:/projeto
+    depends_on:
+      - app
 
 volumes:
   dados:
