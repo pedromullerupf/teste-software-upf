@@ -65,3 +65,11 @@ class RepositorioPostgres:
             conexao.execute(
                 "UPDATE titulos SET status = %s WHERE id = %s", (status, titulo_id)
             )
+
+    def fluxo_caixa(self, inicio: date, fim: date) -> Decimal:
+        """Regra 7, calculada pela função fn_fluxo_caixa do banco."""
+        with self._conectar() as conexao:
+            linha = conexao.execute(
+                "SELECT fn_fluxo_caixa(%s, %s) AS saldo", (inicio, fim)
+            ).fetchone()
+            return linha["saldo"]

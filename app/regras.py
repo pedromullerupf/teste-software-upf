@@ -33,7 +33,7 @@ def calcular_encargos(valor: Decimal, vencimento: date, pagamento: date) -> Deci
         return ZERO
     dias_de_atraso = (pagamento - vencimento_efetivo).days
     encargos = valor * MULTA + valor * JUROS_AO_DIA * dias_de_atraso
-    return encargos.quantize(CENTAVO, rounding=ROUND_HALF_UP)
+    return encargos.quantize(CENTAVO, rounding=ROUND_DOWN)
 
 
 def gerar_parcelas(valor: Decimal, quantidade: int) -> list[Decimal]:
