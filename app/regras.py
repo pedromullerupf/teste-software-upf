@@ -12,7 +12,7 @@ CENTAVO = Decimal("0.01")
 ZERO = Decimal("0.00")
 
 TIPOS = ("pagar", "receber")
-STATUS_QUE_ACEITAM_BAIXA = ("aberto", "parcial", "cancelado")
+STATUS_QUE_ACEITAM_BAIXA = ("aberto", "parcial")
 
 
 class RegraVioladaError(ValueError):
@@ -29,7 +29,7 @@ def proximo_dia_util(data: date) -> date:
 def calcular_encargos(valor: Decimal, vencimento: date, pagamento: date) -> Decimal:
     """Regra 4: multa de 2% mais juros de 0,033% ao dia, só para pagamento em atraso."""
     vencimento_efetivo = proximo_dia_util(vencimento)
-    if pagamento < vencimento_efetivo:
+    if pagamento <= vencimento_efetivo:
         return ZERO
     dias_de_atraso = (pagamento - vencimento_efetivo).days
     encargos = valor * MULTA + valor * JUROS_AO_DIA * dias_de_atraso
@@ -41,7 +41,9 @@ def gerar_parcelas(valor: Decimal, quantidade: int) -> list[Decimal]:
     if quantidade < 1:
         raise RegraVioladaError("A quantidade de parcelas deve ser pelo menos 1.")
     parcela = (valor / quantidade).quantize(CENTAVO, rounding=ROUND_DOWN)
-    return [parcela] * quantidade
+    parcelas = [parcela] * quantidade
+    parcelas[0] += valor - parcela * quantidade
+    return parcelas
 
 
 def vencimentos_das_parcelas(primeiro_vencimento: date, quantidade: int) -> list[date]:
@@ -55,6 +57,8 @@ def validar_titulo(tipo: str, descricao: str, valor: Decimal) -> None:
         raise RegraVioladaError("O tipo deve ser 'pagar' ou 'receber'.")
     if not descricao.strip():
         raise RegraVioladaError("A descrição é obrigatória.")
+    if valor <= 0:
+        raise RegraVioladaError("O valor do título deve ser maior que zero.")
 
 
 def validar_baixa(saldo: Decimal, status: str, valor: Decimal) -> None:
@@ -63,6 +67,8 @@ def validar_baixa(saldo: Decimal, status: str, valor: Decimal) -> None:
         raise RegraVioladaError(f"Título {status} não pode receber baixa.")
     if valor <= 0:
         raise RegraVioladaError("O valor da baixa deve ser maior que zero.")
+    if valor > saldo:
+        raise RegraVioladaError("O valor da baixa não pode ser maior que o saldo do título.")
 
 
 def novo_status(valor_do_titulo: Decimal, saldo_restante: Decimal) -> str:
